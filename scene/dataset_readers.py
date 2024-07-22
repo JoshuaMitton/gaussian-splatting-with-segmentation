@@ -32,6 +32,9 @@ class CameraInfo(NamedTuple):
     image: np.array
     image_path: str
     image_name: str
+    image_mask: np.array
+    image_mask_path: str
+    image_mask_name: str
     width: int
     height: int
 
@@ -65,7 +68,7 @@ def getNerfppNorm(cam_info):
 
     return {"translate": translate, "radius": radius}
 
-def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
+def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, images_mask_folder=None):
     cam_infos = []
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write('\r')
@@ -98,8 +101,19 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         image_name = os.path.basename(image_path).split(".")[0]
         image = Image.open(image_path)
 
+        if images_mask_folder is None:
+            image_mask_path = None
+            image_mask_name = None
+            image_mask = None
+        else:
+            image_mask_path = os.path.join(images_mask_folder, 'mask_'+os.path.basename(extr.name))
+            image_mask_name = os.path.basename(image_mask_path).split(".")[0]
+            image_mask = Image.open(image_mask_path).convert('L')
+
         cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
-                              image_path=image_path, image_name=image_name, width=width, height=height)
+                              image_path=image_path, image_name=image_name, image_mask=image_mask, 
+                              image_mask_path=image_mask_path, image_mask_name=image_mask_name, 
+                              width=width, height=height)
         cam_infos.append(cam_info)
     sys.stdout.write('\n')
     return cam_infos
@@ -142,7 +156,12 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
     reading_dir = "images" if images == None else images
-    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
+    image_mask_path = os.path.join(path, "images_masks")
+    if os.path.exists(image_mask_path):
+        pass
+    else:
+        image_mask_path = None
+    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir), images_mask_folder=image_mask_path)
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
     if eval:

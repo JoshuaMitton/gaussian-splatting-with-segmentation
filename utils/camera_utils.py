@@ -39,12 +39,14 @@ def loadCam(args, id, cam_info, resolution_scale):
         resolution = (int(orig_w / scale), int(orig_h / scale))
 
     resized_image_rgb = PILtoTorch(cam_info.image, resolution)
-
     gt_image = resized_image_rgb[:3, ...]
-    loaded_mask = None
 
-    if resized_image_rgb.shape[1] == 4:
+    if cam_info.image_mask is not None:
+        loaded_mask = PILtoTorch(cam_info.image_mask, resolution)
+    elif resized_image_rgb.shape[1] == 4:
         loaded_mask = resized_image_rgb[3:4, ...]
+    else:
+        loaded_mask = None
 
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
